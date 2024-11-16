@@ -16,8 +16,8 @@ ___
 
 ## Installing
 
-1. Download [stitch-images-gui.ps1](https://github.com/dimitryzub/powershell-image-stitcher/blob/main/stitch-images-gui.ps1) PowerShell script.
-2. Place it where you like.
+1. [Download ImageMagick](https://imagemagick.org/script/download.php#windows). I was using `ImageMagick-<version>-HDRI-x64-static.exe`
+2. Download [stitch-images-gui.ps1](https://github.com/dimitryzub/powershell-image-stitcher/blob/main/stitch-images-gui.ps1) PowerShell script and place it where you like.
 3. Create a shortcut:
 <img src="https://github.com/user-attachments/assets/9ce096ff-9b6e-432b-b500-1b0aa3d334aa" alt="creating shortcut" width="700">
 
