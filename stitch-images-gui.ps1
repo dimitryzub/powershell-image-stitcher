@@ -27,15 +27,19 @@ $checkBoxHorizontal = New-Object System.Windows.Forms.CheckBox
 $checkBoxHorizontal.Text = "Stitch Horizontally"
 $checkBoxHorizontal.Location = New-Object System.Drawing.Point(10, 160)
 $checkBoxHorizontal.Checked = $true  # Default to horizontal stitching
+$checkBoxHorizontal.AutoSize = $true
 
 $checkBoxVertical = New-Object System.Windows.Forms.CheckBox
 $checkBoxVertical.Text = "Stitch Vertically"
 $checkBoxVertical.Location = New-Object System.Drawing.Point(150, 160)
+$checkBoxVertical.AutoSize = $true
 
-# Checkbox for montage option
+# Checkbox for montage option, disabled by default
 $checkBoxMontage = New-Object System.Windows.Forms.CheckBox
-$checkBoxMontage.Text = "Create Montage"
+$checkBoxMontage.Text = "Create Montage (more than 2 images)"
 $checkBoxMontage.Location = New-Object System.Drawing.Point(10, 190)
+$checkBoxMontage.AutoSize = $true
+$checkBoxMontage.Enabled = $false  # Initially disabled
 
 # Button to stitch images
 $buttonStitch = New-Object System.Windows.Forms.Button
@@ -65,7 +69,14 @@ $textBoxImages.Add_DragDrop({
     $files = $_.Data.GetData([Windows.Forms.DataFormats]::FileDrop)
     if ($files.Count -gt 0) {
         # Join file paths into a single string with line breaks for display
-        $textBoxImages.Text += [string]::Join("`n", $files) + "`n"  
+        $textBoxImages.Text += [string]::Join("`n", $files) + "`n"
+
+        # Enable montage checkbox if more than 2 images are passed
+        if ($files.Count -gt 2) {
+            $checkBoxMontage.Enabled = $true  # Enable montage checkbox
+        } else {
+            $checkBoxMontage.Enabled = $false  # Disable montage checkbox if less than or equal to 2 images
+        }
     }
 })
 
@@ -182,7 +193,6 @@ $buttonStitch.Add_Click({
     }
 })
 
-
 # Checkbox changed event to disable/enable stitching options based on montage selection 
 $checkBoxMontage.Add_CheckedChanged({
     if ($checkBoxMontage.Checked) {
@@ -194,7 +204,7 @@ $checkBoxMontage.Add_CheckedChanged({
     }
 })
 
-# Button click event for help button
+# Help button
 $buttonHelp.Add_Click({
     [System.Windows.Forms.MessageBox]::Show("This is a compact tool that combines multiple photos into one. For example, you can combine several pictures into a single panoramic view.`n`nHow it works:`n1. Select multiple pictures and drop them into the window.`n`nUpdating/changing tool:`n1. If it is not clear how the code works, insert code into ChatGPT or another LLM so it can explain it to you.`n2. If you want to add new functionality but you don't understand PowerShell, you can also use ChatGPT or similar LLM to figure it out.", "Help", [System.Windows.Forms.MessageBoxButtons]::OK)
 })
@@ -209,5 +219,4 @@ $form.Controls.Add($buttonStitch)
 $form.Controls.Add($resultLabel)
 $form.Controls.Add($buttonHelp)
 
-# Show the form
 $form.ShowDialog()
