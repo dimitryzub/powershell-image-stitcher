@@ -5,7 +5,7 @@ Add-Type -AssemblyName System.Drawing
 # Form
 $form = New-Object System.Windows.Forms.Form
 $form.Text = "Image Stitcher"
-$form.Size = New-Object System.Drawing.Size(400, 400)
+$form.Size = New-Object System.Drawing.Size(400, 450)
 $form.StartPosition = "CenterScreen"
 $form.TopMost = $true  # Set the form to be always on top
 
@@ -32,20 +32,25 @@ $checkBoxVertical = New-Object System.Windows.Forms.CheckBox
 $checkBoxVertical.Text = "Stitch Vertically"
 $checkBoxVertical.Location = New-Object System.Drawing.Point(150, 160)
 
+# Checkbox for montage option
+$checkBoxMontage = New-Object System.Windows.Forms.CheckBox
+$checkBoxMontage.Text = "Create Montage"
+$checkBoxMontage.Location = New-Object System.Drawing.Point(10, 190)
+
 # Button to stitch images
 $buttonStitch = New-Object System.Windows.Forms.Button
 $buttonStitch.Text = "Stitch Images"
-$buttonStitch.Location = New-Object System.Drawing.Point(10, 200)
+$buttonStitch.Location = New-Object System.Drawing.Point(10, 230)
 
 # Results label
 $resultLabel = New-Object System.Windows.Forms.Label
-$resultLabel.Location = New-Object System.Drawing.Point(10, 240)
+$resultLabel.Location = New-Object System.Drawing.Point(10, 270)
 $resultLabel.AutoSize = $true
 
 # Help button
 $buttonHelp = New-Object System.Windows.Forms.Button
 $buttonHelp.Text = "Help"
-$buttonHelp.Location = New-Object System.Drawing.Point(280, 200)
+$buttonHelp.Location = New-Object System.Drawing.Point(280, 230)
 
 # Drag-and-drop event handler for the text box
 $textBoxImages.Add_DragEnter({
@@ -90,34 +95,102 @@ $buttonStitch.Add_Click({
         # Get the directory of the first image to save output there
         $outputDirectory = [System.IO.Path]::GetDirectoryName($imagePaths[0].Trim())
 
-        # Create the output filename using the name of the first image with "_combined" suffix and .jpg extension
-        $outputPath = Join-Path -Path $outputDirectory -ChildPath "$($firstImageName)_combined.jpg"
+        # Create the output filename base using the name of the first image with "_combined" suffix 
+        $outputPathBase = Join-Path -Path $outputDirectory -ChildPath "$($firstImageName)_combined"
 
-        # Check stitch direction based on user-definer checkbox selection and stitch accordingly
-        if ($checkBoxHorizontal.Checked) {
-            & magick convert @($imagePaths) +append "$outputPath"  # Stitch horizontally (side by side)
+        # Check stitch direction based on user-defined checkbox selection and stitch accordingly
+        if ($checkBoxMontage.Checked) {
+            # Determine tile size based on number of images
+            $numImages = $imagePaths.Length
+            
+            # Set tile size for montage dynamically based on number of images
+            if ($numImages -eq 2) {
+                $tileSize = "1x2"
+            } elseif ($numImages -eq 3) {
+                $tileSize = "1x3"
+            } elseif ($numImages -le 4) {
+                $tileSize = "2x2"
+            } else {
+                # For more than 4 images, calculate a reasonable tile size
+                $columns = [math]::Ceiling([math]::Sqrt($numImages))
+                $rows = [math]::Ceiling($numImages / $columns)
+                $tileSize = "${rows}x${columns}"
+            }
+
+            # Apply geometry only if more than two images are passed 
+            if ($numImages -gt 2) {
+                & magick montage @($imagePaths) -tile $tileSize -geometry +2+2 "$outputPathBase.jpg"  # Create montage layout with offset 
+            } else {
+                & magick montage @($imagePaths) -tile $tileSize "$outputPathBase.jpg"  # Create montage layout without offset 
+            }
+            $resultLabel.Text = "Montage created and saved as: `n$outputPathBase.jpg"
+
+            # Prompt user to continue or exit after successful operation 
+            $dialogResult = [System.Windows.Forms.MessageBox]::Show("Do you want to stitch another set of images?", "Continue?", [System.Windows.Forms.MessageBoxButtons]::YesNo)
+
+            if ($dialogResult -eq [System.Windows.Forms.DialogResult]::No) {
+                $form.Close()  # Close the form if user chooses 'No'
+            } else {
+                # Clear text box for new input if user chooses 'Yes'
+                $textBoxImages.Clear()
+                $resultLabel.Text = ""
+                $checkBoxHorizontal.Checked = $true     # Reset to default option (horizontal)
+                $checkBoxVertical.Checked = $false      # Reset vertical checkbox state 
+                $checkBoxMontage.Checked = $false       # Reset montage checkbox state 
+            }
+            
+            return 
+        } elseif ($checkBoxHorizontal.Checked) {
+            & magick convert @($imagePaths) +append "$outputPathBase.jpg"  # Stitch horizontally (side by side)
+            $resultLabel.Text = "Images have been stitched together horizontally and saved as: `n$outputPathBase.jpg"
+
+            # Similar prompt for horizontal stitching
+            $dialogResult = [System.Windows.Forms.MessageBox]::Show("Do you want to stitch another set of images?", "Continue?", [System.Windows.Forms.MessageBoxButtons]::YesNo)
+
+            if ($dialogResult -eq [System.Windows.Forms.DialogResult]::No) {
+                $form.Close()  # Close the form if user chooses 'No'
+            } else {
+                # Clear text box for new input if user chooses 'Yes'
+                $textBoxImages.Clear()
+                $resultLabel.Text = ""
+                $checkBoxHorizontal.Checked = $true     # Reset to default option (horizontal)
+                $checkBoxVertical.Checked = $false      # Reset vertical checkbox state 
+                $checkBoxMontage.Checked = $false       # Reset montage checkbox state 
+            }
+
         } elseif ($checkBoxVertical.Checked) {
-            & magick convert @($imagePaths) -append "$outputPath"  # Stitch vertically (on top of each other)
-        }
+            & magick convert @($imagePaths) -append "$outputPathBase.jpg"  # Stitch vertically (on top of each other)
+            $resultLabel.Text = "Images have been stitched together vertically and saved as: `n$outputPathBase.jpg"
 
-        # Display result with full output path saved
-        $resultLabel.Text = "Images have been stitched together and saved as: `n$outputPath"
+            # Similar prompt for vertical stitching
+            $dialogResult = [System.Windows.Forms.MessageBox]::Show("Do you want to stitch another set of images?", "Continue?", [System.Windows.Forms.MessageBoxButtons]::YesNo)
 
-        # Prompt user to continue or exit
-        $dialogResult = [System.Windows.Forms.MessageBox]::Show("Do you want to stitch another set of images?", "Continue?", [System.Windows.Forms.MessageBoxButtons]::YesNo)
-
-        if ($dialogResult -eq [System.Windows.Forms.DialogResult]::No) {
-            $form.Close()  # Close the form if user chooses 'No'
-        } else {
-            # Clear text box for new input if user chooses 'Yes'
-            $textBoxImages.Clear()
-            $resultLabel.Text = ""
-            $checkBoxHorizontal.Checked = $true     # Reset to default option (horizontal)
-            $checkBoxVertical.Checked = $false      # Reset vertical checkbox state 
+            if ($dialogResult -eq [System.Windows.Forms.DialogResult]::No) {
+                $form.Close()  # Close the form if user chooses 'No'
+            } else {
+                # Clear text box for new input if user chooses 'Yes'
+                $textBoxImages.Clear()
+                $resultLabel.Text = ""
+                $checkBoxHorizontal.Checked = $true     # Reset to default option (horizontal)
+                $checkBoxVertical.Checked = $false      # Reset vertical checkbox state 
+                $checkBoxMontage.Checked = $false       # Reset montage checkbox state 
+            }
         }
 
     } catch {
         $resultLabel.Text = "An error occurred: $_"
+    }
+})
+
+
+# Checkbox changed event to disable/enable stitching options based on montage selection 
+$checkBoxMontage.Add_CheckedChanged({
+    if ($checkBoxMontage.Checked) {
+        $checkBoxHorizontal.Enabled = $false   # Disable horizontal stitching checkbox 
+        $checkBoxVertical.Enabled = $false     # Disable vertical stitching checkbox 
+    } else {
+        $checkBoxHorizontal.Enabled = $true    # Enable horizontal stitching checkbox 
+        $checkBoxVertical.Enabled = $true      # Enable vertical stitching checkbox 
     }
 })
 
@@ -131,6 +204,7 @@ $form.Controls.Add($label1)
 $form.Controls.Add($textBoxImages)
 $form.Controls.Add($checkBoxHorizontal)
 $form.Controls.Add($checkBoxVertical)
+$form.Controls.Add($checkBoxMontage)
 $form.Controls.Add($buttonStitch)
 $form.Controls.Add($resultLabel)
 $form.Controls.Add($buttonHelp)
