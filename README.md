@@ -40,4 +40,4 @@ This tool adds a GUI layer to ImageMagick functionality to easily drag and drop 
 Yes, there are a few free tools but they require several clicks to stitch images.
 
 ### Possible features
-1. Mosaic AKA [montage](https://sinestesia.co/blog/tutorials/quick-n-easy-mosaics-with-imagemagick/) command via user-defined checkbox.
+1. ~~Mosaic AKA [montage](https://sinestesia.co/blog/tutorials/quick-n-easy-mosaics-with-imagemagick/) command via user-defined checkbox.~~ [Implemented](https://github.com/dimitryzub/powershell-image-stitcher/commit/540e73eb5047cca5af164b671ae98124d6333a3d) ✅
